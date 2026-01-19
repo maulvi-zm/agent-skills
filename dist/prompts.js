@@ -1,6 +1,12 @@
-import { checkbox, confirm } from '@inquirer/prompts';
+import { checkbox, confirm, select } from '@inquirer/prompts';
 import chalk from 'chalk';
-const DEFAULT_SUGGESTED_CATEGORIES = ['code-quality', 'shared'];
+const DEFAULT_SUGGESTED_CATEGORIES_GLOBAL = ['code-quality', 'shared'];
+const DEFAULT_SUGGESTED_CATEGORIES_LOCAL = [
+    'code-quality',
+    'shared',
+    'frontend',
+    'backend',
+];
 /**
  * Prompt user to select agents to install.
  * All agents are suggested by default.
@@ -42,22 +48,44 @@ export async function selectCommands(commands) {
     });
 }
 /**
- * Prompt user to select skills by category.
- * code-quality and shared categories are suggested by default.
- * frontend and backend categories are unchecked by default.
+ * Prompt user to select installation location.
  */
-export async function selectSkills(skillCategories) {
+export async function selectInstallLocation() {
+    return select({
+        message: 'Where would you like to install?',
+        choices: [
+            {
+                name: 'Global (~/.claude/)',
+                value: 'global',
+                description: 'Available to all projects, with essential skills',
+            },
+            {
+                name: 'Local (./claude/)',
+                value: 'local',
+                description: 'This project only, with all skills',
+            },
+        ],
+    });
+}
+/**
+ * Prompt user to select skills by category.
+ * Suggested categories depend on installation location.
+ */
+export async function selectSkills(skillCategories, location = 'global') {
     const categoryNames = Object.keys(skillCategories);
     if (categoryNames.length === 0) {
         return {};
     }
+    const suggestedCategories = location === 'global'
+        ? DEFAULT_SUGGESTED_CATEGORIES_GLOBAL
+        : DEFAULT_SUGGESTED_CATEGORIES_LOCAL;
     const selectedSkills = {};
     for (const categoryName of categoryNames) {
         const category = skillCategories[categoryName];
         if (category.skills.length === 0) {
             continue;
         }
-        const isSuggestedCategory = DEFAULT_SUGGESTED_CATEGORIES.includes(categoryName);
+        const isSuggestedCategory = suggestedCategories.includes(categoryName);
         const categoryIcon = getCategoryIcon(categoryName);
         console.log(chalk.cyan(`\n${categoryIcon} Skills: ${category.displayName}`));
         const choices = category.skills.map((skill) => ({

@@ -1,6 +1,7 @@
 import { homedir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { cwd } from 'process';
 /**
  * Get the global Claude configuration directory based on platform.
  * - macOS/Linux: ~/.claude/
@@ -16,6 +17,16 @@ export function getClaudeConfigDir() {
         return join(homedir(), '.claude');
     }
     return join(homedir(), '.claude');
+}
+/**
+ * Get the installation directory based on location type.
+ */
+export function getInstallDir(location) {
+    if (location === 'global') {
+        return getClaudeConfigDir();
+    }
+    // Local installation in current working directory
+    return join(cwd(), 'claude');
 }
 /**
  * Get the source configuration directory (where components are stored).

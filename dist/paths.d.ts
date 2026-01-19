@@ -1,3 +1,4 @@
+export type InstallLocation = 'local' | 'global';
 export interface ConfigPaths {
     agents: string;
     commands: string;
@@ -14,6 +15,10 @@ export interface PlatformInfo {
  * - Windows: %APPDATA%\Claude\ or %USERPROFILE%\.claude\
  */
 export declare function getClaudeConfigDir(): string;
+/**
+ * Get the installation directory based on location type.
+ */
+export declare function getInstallDir(location: InstallLocation): string;
 /**
  * Get the source configuration directory (where components are stored).
  */

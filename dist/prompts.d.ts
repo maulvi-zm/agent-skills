@@ -1,4 +1,5 @@
 import type { Agent, Command, Skill, SkillCategory } from './discovery.js';
+export type InstallLocation = 'local' | 'global';
 export interface InstallationSummary {
     agents: number;
     commands: number;
@@ -15,11 +16,14 @@ export declare function selectAgents(agents: Agent[]): Promise<Agent[]>;
  */
 export declare function selectCommands(commands: Command[]): Promise<Command[]>;
 /**
- * Prompt user to select skills by category.
- * code-quality and shared categories are suggested by default.
- * frontend and backend categories are unchecked by default.
+ * Prompt user to select installation location.
  */
-export declare function selectSkills(skillCategories: Record<string, SkillCategory>): Promise<Record<string, Skill[]>>;
+export declare function selectInstallLocation(): Promise<InstallLocation>;
+/**
+ * Prompt user to select skills by category.
+ * Suggested categories depend on installation location.
+ */
+export declare function selectSkills(skillCategories: Record<string, SkillCategory>, location?: InstallLocation): Promise<Record<string, Skill[]>>;
 /**
  * Confirm installation with the user.
  */

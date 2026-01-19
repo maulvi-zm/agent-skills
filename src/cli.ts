@@ -2,9 +2,10 @@
 
 import chalk from 'chalk';
 import {
-  getClaudeConfigDir,
+  getInstallDir,
   getSourceConfigDir,
   getPlatformInfo,
+  type InstallLocation,
 } from './paths.js';
 import { discoverAll } from './discovery.js';
 import {
@@ -12,6 +13,8 @@ import {
   selectCommands,
   selectSkills,
   confirmInstallation,
+  selectInstallLocation,
+  type InstallLocation as PromptInstallLocation,
 } from './prompts.js';
 import {
   install,
@@ -24,11 +27,9 @@ async function main(): Promise<void> {
   console.log(chalk.bold('\n🤖 Agent Skills Installer\n'));
 
   const platform = getPlatformInfo();
-  const targetDir = getClaudeConfigDir();
   const sourceDir = getSourceConfigDir();
 
   console.log(chalk.dim(`   Platform: ${platform.name}`));
-  console.log(chalk.dim(`   Target:   ${targetDir}`));
   console.log(chalk.dim(`   Source:   ${sourceDir}`));
 
   console.log(chalk.dim('\n   Scanning for components...'));
@@ -43,7 +44,7 @@ async function main(): Promise<void> {
 
   console.log(
     chalk.dim(
-      `   Found ${agentCount} agents, ${commandCount} commands, ${skillCount} skills`
+      `   Found ${agentCount} agents, ${commandCount} commands, ${skillCount} skills\n`
     )
   );
 
@@ -55,9 +56,18 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // Ask for installation location
+  const location = await selectInstallLocation();
+  const targetDir = getInstallDir(location as InstallLocation);
+
+  console.log(chalk.dim(`\n   Target:   ${targetDir}`));
+
   const selectedAgents = await selectAgents(components.agents);
   const selectedCommands = await selectCommands(components.commands);
-  const selectedSkills = await selectSkills(components.skillCategories);
+  const selectedSkills = await selectSkills(
+    components.skillCategories,
+    location as PromptInstallLocation
+  );
 
   const selections: Selections = {
     agents: selectedAgents,

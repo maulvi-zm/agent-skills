@@ -1,6 +1,8 @@
-import { checkbox, confirm } from '@inquirer/prompts';
+import { checkbox, confirm, select } from '@inquirer/prompts';
 import chalk from 'chalk';
 import type { Agent, Command, Skill, SkillCategory } from './discovery.js';
+
+export type InstallLocation = 'local' | 'global';
 
 export interface InstallationSummary {
   agents: number;
@@ -8,7 +10,13 @@ export interface InstallationSummary {
   skills: number;
 }
 
-const DEFAULT_SUGGESTED_CATEGORIES = ['code-quality', 'shared'];
+const DEFAULT_SUGGESTED_CATEGORIES_GLOBAL = ['code-quality', 'shared'];
+const DEFAULT_SUGGESTED_CATEGORIES_LOCAL = [
+  'code-quality',
+  'shared',
+  'frontend',
+  'backend',
+];
 
 /**
  * Prompt user to select agents to install.
@@ -59,18 +67,44 @@ export async function selectCommands(commands: Command[]): Promise<Command[]> {
 }
 
 /**
+ * Prompt user to select installation location.
+ */
+export async function selectInstallLocation(): Promise<InstallLocation> {
+  return select({
+    message: 'Where would you like to install?',
+    choices: [
+      {
+        name: 'Global (~/.claude/)',
+        value: 'global',
+        description: 'Available to all projects, with essential skills',
+      },
+      {
+        name: 'Local (./claude/)',
+        value: 'local',
+        description: 'This project only, with all skills',
+      },
+    ],
+  });
+}
+
+/**
  * Prompt user to select skills by category.
- * code-quality and shared categories are suggested by default.
- * frontend and backend categories are unchecked by default.
+ * Suggested categories depend on installation location.
  */
 export async function selectSkills(
-  skillCategories: Record<string, SkillCategory>
+  skillCategories: Record<string, SkillCategory>,
+  location: InstallLocation = 'global'
 ): Promise<Record<string, Skill[]>> {
   const categoryNames = Object.keys(skillCategories);
 
   if (categoryNames.length === 0) {
     return {};
   }
+
+  const suggestedCategories =
+    location === 'global'
+      ? DEFAULT_SUGGESTED_CATEGORIES_GLOBAL
+      : DEFAULT_SUGGESTED_CATEGORIES_LOCAL;
 
   const selectedSkills: Record<string, Skill[]> = {};
 
@@ -81,8 +115,7 @@ export async function selectSkills(
       continue;
     }
 
-    const isSuggestedCategory =
-      DEFAULT_SUGGESTED_CATEGORIES.includes(categoryName);
+    const isSuggestedCategory = suggestedCategories.includes(categoryName);
     const categoryIcon = getCategoryIcon(categoryName);
 
     console.log(

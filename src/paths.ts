@@ -1,6 +1,9 @@
 import { homedir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { cwd } from 'process';
+
+export type InstallLocation = 'local' | 'global';
 
 export interface ConfigPaths {
   agents: string;
@@ -31,6 +34,17 @@ export function getClaudeConfigDir(): string {
   }
 
   return join(homedir(), '.claude');
+}
+
+/**
+ * Get the installation directory based on location type.
+ */
+export function getInstallDir(location: InstallLocation): string {
+  if (location === 'global') {
+    return getClaudeConfigDir();
+  }
+  // Local installation in current working directory
+  return join(cwd(), 'claude');
 }
 
 /**
