@@ -24,7 +24,8 @@ function displayHeader(): void {
   console.log(chalk.blue('│  Component Selection                   │'));
   console.log(chalk.blue('└────────────────────────────────────────┘'));
   console.log('');
-  console.log(chalk.dim('j/k: navigate  |  space: select  |  enter: open  |  b: back  |  f: finish'));
+  console.log(chalk.dim('↑/↓: navigate  |  space: select  |  enter: open  |  backspace/b: back  |  f: finish'));
+  console.log(chalk.dim.yellow('Note: Selecting a collection will install all items within it'));
   console.log('');
 }
 
@@ -62,8 +63,11 @@ function displayItems(
 
     // Label with folder indicator
     let label = item.label;
+
     if (item.type === 'folder') {
-      label = chalk.cyan(item.label + '/');
+      label = chalk.cyan(item.label + '/') + chalk.dim(' (collection)');
+    } else {
+      label = item.label;
     }
 
     const line = `${cursor} ${checkbox} ${label}`;
@@ -74,7 +78,35 @@ function displayItems(
 }
 
 /**
- * Interactive menu navigator with j/k support and hierarchical browsing
+ * Recursively select all children of a folder
+ */
+function selectAllChildren(item: MenuItem, selectedItems: Set<string>): void {
+  if (item.children) {
+    item.children.forEach((child) => {
+      selectedItems.add(child.id);
+      if (child.type === 'folder') {
+        selectAllChildren(child, selectedItems);
+      }
+    });
+  }
+}
+
+/**
+ * Recursively deselect all children of a folder
+ */
+function deselectAllChildren(item: MenuItem, selectedItems: Set<string>): void {
+  if (item.children) {
+    item.children.forEach((child) => {
+      selectedItems.delete(child.id);
+      if (child.type === 'folder') {
+        deselectAllChildren(child, selectedItems);
+      }
+    });
+  }
+}
+
+/**
+ * Interactive menu navigator with arrow key support and hierarchical browsing
  */
 export async function interactiveMenu(root: MenuItem): Promise<Set<string>> {
   const selectedItems = new Set<string>();
@@ -99,25 +131,47 @@ export async function interactiveMenu(root: MenuItem): Promise<Set<string>> {
         process.exit(0);
       }
 
+      // Handle arrow keys
+      if (char === '\u001b[A') {
+        // Up arrow
+        state.selectedIndex =
+          (state.selectedIndex - 1 + state.currentItems.length) %
+          state.currentItems.length;
+        render();
+        return;
+      }
+
+      if (char === '\u001b[B') {
+        // Down arrow
+        state.selectedIndex = (state.selectedIndex + 1) % state.currentItems.length;
+        render();
+        return;
+      }
+
       switch (char.toLowerCase()) {
-        case 'j': // Down
-          state.selectedIndex = (state.selectedIndex + 1) % state.currentItems.length;
-          render();
-          break;
-
-        case 'k': // Up
-          state.selectedIndex =
-            (state.selectedIndex - 1 + state.currentItems.length) %
-            state.currentItems.length;
-          render();
-          break;
-
         case ' ': // Select
           const currentItem = state.currentItems[state.selectedIndex];
-          if (selectedItems.has(currentItem.id)) {
-            selectedItems.delete(currentItem.id);
+
+          if (currentItem.type === 'folder') {
+            // Select/deselect all children in this folder
+            const isCurrentlySelected = selectedItems.has(currentItem.id);
+
+            if (isCurrentlySelected) {
+              // Deselect folder and all children
+              selectedItems.delete(currentItem.id);
+              deselectAllChildren(currentItem, selectedItems);
+            } else {
+              // Select folder and all children
+              selectedItems.add(currentItem.id);
+              selectAllChildren(currentItem, selectedItems);
+            }
           } else {
-            selectedItems.add(currentItem.id);
+            // Regular file selection toggle
+            if (selectedItems.has(currentItem.id)) {
+              selectedItems.delete(currentItem.id);
+            } else {
+              selectedItems.add(currentItem.id);
+            }
           }
           render();
           break;
@@ -134,6 +188,8 @@ export async function interactiveMenu(root: MenuItem): Promise<Set<string>> {
           break;
 
         case 'b': // Back
+        case '\u007f': // Backspace (delete)
+        case '\u0008': // Backspace (control-H)
           if (state.path.length > 0) {
             state.path.pop();
             if (state.path.length === 0) {
