@@ -10,11 +10,18 @@ A CLI tool to install Claude Code agents, commands, and skills either globally o
 npx github:maulvi-zm/agent-skills
 ```
 
-The installer will:
-1. Ask you to choose between global or local installation
-2. Show you smart defaults based on your choice
-3. Let you customize which components to install
-4. Install to the selected location
+The installer features a shopping cart-style interface:
+1. Choose between global or local installation
+2. See recommendations based on your choice
+3. Browse and select agents, commands, and skills
+4. Screen clears after each category selection (like browsing folders)
+5. Review your selections in a summary before installation
+6. Install to the selected location
+
+**Navigation Tips:**
+- Use `j` and `k` to navigate up and down
+- Press `space` to select/deselect items
+- Press `f` to finish when done with a category (or follow the prompts)
 
 ### Using from a different GitHub account
 
@@ -48,9 +55,10 @@ Users can choose where to install:
    - Available to all projects
    - Suggested defaults: all agents, all commands, code-quality & shared skills only
 
-2. **Local** (`./claude/` in current directory)
+2. **Local** (`./.claude/` in current directory)
    - This project only
-   - Suggested defaults: all agents, all commands, all skills
+   - Suggested defaults: all agents, all commands, all skills unchecked by default
+   - Choose only the skills relevant to your project (frontend, backend, etc.)
 
 ### Components
 
@@ -73,12 +81,29 @@ The defaults change based on installation location:
 - `backend/` skills: unchecked
 
 **Local Installation:**
-- All agents: **selected**
-- All commands: **selected**
+- General agents: **selected**
+- Frontend/Backend agents: not selected (optional)
+- General commands: **selected**
+- Frontend/Backend commands: not selected (optional)
 - `code-quality/` skills: **selected**
 - `shared/` skills: **selected**
-- `frontend/` skills: **selected**
-- `backend/` skills: **selected**
+- `frontend/` skills: not selected (select if needed)
+- `backend/` skills: not selected (select if needed)
+
+### Shopping Cart Interface
+
+The installer uses a clean, folder-like navigation experience:
+
+1. **Location Selection** - Choose global or local
+2. **Browse Categories** - Screen clears as you browse through:
+   - General Agents
+   - Frontend/Backend Agents (local only)
+   - General Commands
+   - Frontend/Backend Commands (local only)
+   - Skills by category (code-quality, shared, frontend, backend)
+3. **Add to Cart** - Select items using space, navigate with j/k
+4. **Review Summary** - See everything you selected before confirming
+5. **Install** - Components are copied and rules are merged
 
 ## Project structure
 
