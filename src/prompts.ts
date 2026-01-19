@@ -1,6 +1,6 @@
 import { checkbox, confirm, select } from '@inquirer/prompts';
 import chalk from 'chalk';
-import type { Agent, Command, Skill, SkillCategory } from './discovery.js';
+import type { Agent, Command, Skill, SkillCategory, ComponentCategory } from './discovery.js';
 
 export type InstallLocation = 'local' | 'global';
 
@@ -8,6 +8,13 @@ export interface InstallationSummary {
   agents: number;
   commands: number;
   skills: number;
+}
+
+export interface CartItem {
+  type: 'agent' | 'command' | 'skill';
+  name: string;
+  displayName: string;
+  category: ComponentCategory;
 }
 
 const DEFAULT_SUGGESTED_CATEGORIES_GLOBAL = ['code-quality', 'shared'];
@@ -19,51 +26,18 @@ const DEFAULT_SUGGESTED_CATEGORIES_LOCAL = [
 ];
 
 /**
- * Prompt user to select agents to install.
- * All agents are suggested by default.
+ * Clear the console screen.
  */
-export async function selectAgents(agents: Agent[]): Promise<Agent[]> {
-  if (agents.length === 0) {
-    return [];
-  }
-
-  console.log(chalk.cyan('\n📦 Agents'));
-
-  const choices = agents.map((agent) => ({
-    name: agent.displayName,
-    value: agent,
-    checked: true,
-  }));
-
-  return checkbox({
-    message: 'Select agents to install:',
-    choices,
-    pageSize: 15,
-  });
+export function clearScreen(): void {
+  console.clear();
 }
 
 /**
- * Prompt user to select commands to install.
- * All commands are suggested by default.
+ * Show header with navigation hints.
  */
-export async function selectCommands(commands: Command[]): Promise<Command[]> {
-  if (commands.length === 0) {
-    return [];
-  }
-
-  console.log(chalk.cyan('\n⚡ Commands'));
-
-  const choices = commands.map((command) => ({
-    name: command.displayName,
-    value: command,
-    checked: true,
-  }));
-
-  return checkbox({
-    message: 'Select commands to install:',
-    choices,
-    pageSize: 15,
-  });
+export function showHeader(title: string): void {
+  console.log(chalk.bold.cyan(`\n🤖 ${title}\n`));
+  console.log(chalk.dim('  j/k: up/down  |  space: select  |  f: finish\n'));
 }
 
 /**
@@ -79,7 +53,7 @@ export async function selectInstallLocation(): Promise<InstallLocation> {
         description: 'Available to all projects, with essential skills',
       },
       {
-        name: 'Local (./claude/)',
+        name: 'Local (./.claude/)',
         value: 'local',
         description: 'This project only, with all skills',
       },
@@ -125,92 +99,218 @@ export function showInstallationRecommendations(location: InstallLocation): void
     console.log(chalk.green('  ✓ All Commands'));
     console.log(chalk.dim('    → All available utilities\n'));
 
-    console.log(chalk.green('  ✓ All Skills'));
-    console.log(chalk.dim('    → Code quality, shared, frontend, and backend skills\n'));
+    console.log(chalk.green('  ✓ Frontend/Backend Specific Skills'));
+    console.log(chalk.dim('    → Choose what\'s relevant to your project\n'));
+
+    console.log(chalk.yellow('  ○ General Skills'));
+    console.log(chalk.dim('    → Code quality and shared skills available\n'));
 
     console.log(
-      chalk.cyan('  This project has all Claude Code configurations available.\n')
+      chalk.cyan('  Customize your selections to match your project needs.\n')
     );
   }
 }
 
 /**
- * Prompt user to select skills by category.
+ * Shopping cart - select general agents.
+ */
+export async function selectGeneralAgents(agents: Agent[]): Promise<Agent[]> {
+  const generalAgents = agents.filter((a) => a.category === 'general');
+
+  if (generalAgents.length === 0) {
+    return [];
+  }
+
+  clearScreen();
+  showHeader('📦 General Agents');
+
+  const choices = generalAgents.map((agent) => ({
+    name: agent.displayName,
+    value: agent,
+    checked: true,
+  }));
+
+  return checkbox({
+    message: 'Select agents:',
+    choices,
+    pageSize: 10,
+  });
+}
+
+/**
+ * Shopping cart - select project-specific agents for local installation.
+ */
+export async function selectProjectAgents(
+  agents: Agent[],
+  category: 'frontend' | 'backend'
+): Promise<Agent[]> {
+  const projectAgents = agents.filter((a) => a.category === category);
+
+  if (projectAgents.length === 0) {
+    return [];
+  }
+
+  clearScreen();
+  showHeader(`📦 ${category === 'frontend' ? '🎨 Frontend' : '⚙️ Backend'} Agents`);
+
+  const choices = projectAgents.map((agent) => ({
+    name: agent.displayName,
+    value: agent,
+    checked: false, // Not checked by default for local
+  }));
+
+  return checkbox({
+    message: 'Select agents:',
+    choices,
+    pageSize: 10,
+  });
+}
+
+/**
+ * Shopping cart - select general commands.
+ */
+export async function selectGeneralCommands(commands: Command[]): Promise<Command[]> {
+  const generalCommands = commands.filter((c) => c.category === 'general');
+
+  if (generalCommands.length === 0) {
+    return [];
+  }
+
+  clearScreen();
+  showHeader('⚡ General Commands');
+
+  const choices = generalCommands.map((command) => ({
+    name: command.displayName,
+    value: command,
+    checked: true,
+  }));
+
+  return checkbox({
+    message: 'Select commands:',
+    choices,
+    pageSize: 10,
+  });
+}
+
+/**
+ * Shopping cart - select project-specific commands for local installation.
+ */
+export async function selectProjectCommands(
+  commands: Command[],
+  category: 'frontend' | 'backend'
+): Promise<Command[]> {
+  const projectCommands = commands.filter((c) => c.category === category);
+
+  if (projectCommands.length === 0) {
+    return [];
+  }
+
+  clearScreen();
+  showHeader(
+    `⚡ ${category === 'frontend' ? '🎨 Frontend' : '⚙️ Backend'} Commands`
+  );
+
+  const choices = projectCommands.map((command) => ({
+    name: command.displayName,
+    value: command,
+    checked: false, // Not checked by default for local
+  }));
+
+  return checkbox({
+    message: 'Select commands:',
+    choices,
+    pageSize: 10,
+  });
+}
+
+/**
+ * Shopping cart - select skills by category.
  * Suggested categories depend on installation location.
  */
-export async function selectSkills(
+export async function selectSkillsByCategory(
   skillCategories: Record<string, SkillCategory>,
+  category: string,
   location: InstallLocation = 'global'
-): Promise<Record<string, Skill[]>> {
-  const categoryNames = Object.keys(skillCategories);
+): Promise<Skill[]> {
+  const skillCategory = skillCategories[category];
 
-  if (categoryNames.length === 0) {
-    return {};
+  if (!skillCategory || skillCategory.skills.length === 0) {
+    return [];
   }
+
+  clearScreen();
+  const categoryIcon = getCategoryIcon(category);
+  showHeader(`${categoryIcon} ${skillCategory.displayName} Skills`);
 
   const suggestedCategories =
     location === 'global'
       ? DEFAULT_SUGGESTED_CATEGORIES_GLOBAL
       : DEFAULT_SUGGESTED_CATEGORIES_LOCAL;
 
-  const selectedSkills: Record<string, Skill[]> = {};
+  const isSuggested = suggestedCategories.includes(category);
 
-  for (const categoryName of categoryNames) {
-    const category = skillCategories[categoryName];
+  const choices = skillCategory.skills.map((skill) => ({
+    name: skill.displayName,
+    value: skill,
+    checked: isSuggested,
+  }));
 
-    if (category.skills.length === 0) {
-      continue;
-    }
-
-    const isSuggestedCategory = suggestedCategories.includes(categoryName);
-    const categoryIcon = getCategoryIcon(categoryName);
-
-    console.log(
-      chalk.cyan(`\n${categoryIcon} Skills: ${category.displayName}`)
-    );
-
-    const choices = category.skills.map((skill) => ({
-      name: skill.displayName,
-      value: skill,
-      checked: isSuggestedCategory,
-    }));
-
-    const selected = await checkbox({
-      message: `Select ${categoryName} skills to install:`,
-      choices,
-      pageSize: 15,
-    });
-
-    if (selected.length > 0) {
-      selectedSkills[categoryName] = selected;
-    }
-  }
-
-  return selectedSkills;
+  return checkbox({
+    message: 'Select skills:',
+    choices,
+    pageSize: 10,
+  });
 }
 
 /**
- * Confirm installation with the user.
+ * Show installation summary before confirming.
  */
-export async function confirmInstallation(
+export function showInstallationSummary(
+  cart: CartItem[],
   targetDir: string,
-  summary: InstallationSummary
-): Promise<boolean> {
-  console.log(chalk.yellow('\n📋 Installation Summary'));
-  console.log(chalk.dim(`   Target: ${targetDir}`));
+  location: InstallLocation
+): void {
+  clearScreen();
+  showHeader('📋 Installation Summary');
 
-  if (summary.agents > 0) {
-    console.log(`   • ${summary.agents} agent(s)`);
-  }
-  if (summary.commands > 0) {
-    console.log(`   • ${summary.commands} command(s)`);
-  }
-  if (summary.skills > 0) {
-    console.log(`   • ${summary.skills} skill(s)`);
+  const agents = cart.filter((i) => i.type === 'agent');
+  const commands = cart.filter((i) => i.type === 'command');
+  const skills = cart.filter((i) => i.type === 'skill');
+
+  console.log(chalk.cyan(`\nTarget: ${targetDir}`));
+  console.log(chalk.cyan(`Location: ${location === 'global' ? '🌍 Global' : '📁 Local'}\n`));
+
+  if (agents.length > 0) {
+    console.log(chalk.green(`  Agents (${agents.length}):`));
+    agents.forEach((a) => {
+      console.log(chalk.dim(`    • ${a.displayName}`));
+    });
+    console.log('');
   }
 
-  console.log('');
+  if (commands.length > 0) {
+    console.log(chalk.green(`  Commands (${commands.length}):`));
+    commands.forEach((c) => {
+      console.log(chalk.dim(`    • /${c.displayName}`));
+    });
+    console.log('');
+  }
 
+  if (skills.length > 0) {
+    console.log(chalk.green(`  Skills (${skills.length}):`));
+    skills.forEach((s) => {
+      console.log(chalk.dim(`    • ${s.displayName}`));
+    });
+    console.log('');
+  }
+
+  console.log(chalk.cyan(`  Total: ${agents.length} agents, ${commands.length} commands, ${skills.length} skills\n`));
+}
+
+/**
+ * Confirm installation.
+ */
+export async function confirmInstallation(): Promise<boolean> {
   return confirm({
     message: 'Proceed with installation?',
     default: true,

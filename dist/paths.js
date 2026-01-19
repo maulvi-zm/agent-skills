@@ -26,7 +26,7 @@ export function getInstallDir(location) {
         return getClaudeConfigDir();
     }
     // Local installation in current working directory
-    return join(cwd(), 'claude');
+    return join(cwd(), '.claude');
 }
 /**
  * Get the source configuration directory (where components are stored).

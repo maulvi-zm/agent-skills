@@ -31,6 +31,7 @@ export async function discoverAgents(sourceDir) {
                 mdFile: join(agentsDir, mdFile),
                 rulesFile: join(agentsDir, rulesFile),
                 displayName: formatDisplayName(name),
+                category: categorizeComponent(name),
             });
         }
     }
@@ -54,6 +55,7 @@ export async function discoverCommands(sourceDir) {
             name,
             file: join(commandsDir, mdFile),
             displayName: formatDisplayName(name),
+            category: categorizeComponent(name),
         });
     }
     return commands;
@@ -129,5 +131,28 @@ export async function discoverAll(sourceDir) {
 }
 function formatDisplayName(name) {
     return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function categorizeComponent(name) {
+    const lowerName = name.toLowerCase();
+    // Backend patterns
+    if (lowerName.includes('backend') ||
+        lowerName.includes('api') ||
+        lowerName.includes('database') ||
+        lowerName.includes('prisma') ||
+        lowerName.includes('express')) {
+        return 'backend';
+    }
+    // Frontend patterns
+    if (lowerName.includes('frontend') ||
+        lowerName.includes('react') ||
+        lowerName.includes('nextjs') ||
+        lowerName.includes('next-js') ||
+        lowerName.includes('ui') ||
+        lowerName.includes('component') ||
+        lowerName.includes('tailwind')) {
+        return 'frontend';
+    }
+    // Default to general
+    return 'general';
 }
 //# sourceMappingURL=discovery.js.map

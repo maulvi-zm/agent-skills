@@ -1,13 +1,16 @@
+export type ComponentCategory = 'general' | 'backend' | 'frontend';
 export interface Agent {
     name: string;
     mdFile: string;
     rulesFile: string;
     displayName: string;
+    category: ComponentCategory;
 }
 export interface Command {
     name: string;
     file: string;
     displayName: string;
+    category: ComponentCategory;
 }
 export interface Skill {
     name: string;

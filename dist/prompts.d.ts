@@ -1,20 +1,24 @@
-import type { Agent, Command, Skill, SkillCategory } from './discovery.js';
+import type { Agent, Command, Skill, SkillCategory, ComponentCategory } from './discovery.js';
 export type InstallLocation = 'local' | 'global';
 export interface InstallationSummary {
     agents: number;
     commands: number;
     skills: number;
 }
+export interface CartItem {
+    type: 'agent' | 'command' | 'skill';
+    name: string;
+    displayName: string;
+    category: ComponentCategory;
+}
 /**
- * Prompt user to select agents to install.
- * All agents are suggested by default.
+ * Clear the console screen.
  */
-export declare function selectAgents(agents: Agent[]): Promise<Agent[]>;
+export declare function clearScreen(): void;
 /**
- * Prompt user to select commands to install.
- * All commands are suggested by default.
+ * Show header with navigation hints.
  */
-export declare function selectCommands(commands: Command[]): Promise<Command[]>;
+export declare function showHeader(title: string): void;
 /**
  * Prompt user to select installation location.
  */
@@ -24,12 +28,32 @@ export declare function selectInstallLocation(): Promise<InstallLocation>;
  */
 export declare function showInstallationRecommendations(location: InstallLocation): void;
 /**
- * Prompt user to select skills by category.
+ * Shopping cart - select general agents.
+ */
+export declare function selectGeneralAgents(agents: Agent[]): Promise<Agent[]>;
+/**
+ * Shopping cart - select project-specific agents for local installation.
+ */
+export declare function selectProjectAgents(agents: Agent[], category: 'frontend' | 'backend'): Promise<Agent[]>;
+/**
+ * Shopping cart - select general commands.
+ */
+export declare function selectGeneralCommands(commands: Command[]): Promise<Command[]>;
+/**
+ * Shopping cart - select project-specific commands for local installation.
+ */
+export declare function selectProjectCommands(commands: Command[], category: 'frontend' | 'backend'): Promise<Command[]>;
+/**
+ * Shopping cart - select skills by category.
  * Suggested categories depend on installation location.
  */
-export declare function selectSkills(skillCategories: Record<string, SkillCategory>, location?: InstallLocation): Promise<Record<string, Skill[]>>;
+export declare function selectSkillsByCategory(skillCategories: Record<string, SkillCategory>, category: string, location?: InstallLocation): Promise<Skill[]>;
 /**
- * Confirm installation with the user.
+ * Show installation summary before confirming.
  */
-export declare function confirmInstallation(targetDir: string, summary: InstallationSummary): Promise<boolean>;
+export declare function showInstallationSummary(cart: CartItem[], targetDir: string, location: InstallLocation): void;
+/**
+ * Confirm installation.
+ */
+export declare function confirmInstallation(): Promise<boolean>;
 //# sourceMappingURL=prompts.d.ts.map

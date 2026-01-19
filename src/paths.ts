@@ -44,7 +44,7 @@ export function getInstallDir(location: InstallLocation): string {
     return getClaudeConfigDir();
   }
   // Local installation in current working directory
-  return join(cwd(), 'claude');
+  return join(cwd(), '.claude');
 }
 
 /**

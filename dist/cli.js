@@ -2,8 +2,8 @@
 import chalk from 'chalk';
 import { getInstallDir, getSourceConfigDir, getPlatformInfo, } from './paths.js';
 import { discoverAll } from './discovery.js';
-import { selectAgents, selectCommands, selectSkills, confirmInstallation, selectInstallLocation, showInstallationRecommendations, } from './prompts.js';
-import { install, displayResults, getInstallationSummary, } from './installer.js';
+import { selectInstallLocation, showInstallationRecommendations, selectGeneralAgents, selectProjectAgents, selectGeneralCommands, selectProjectCommands, selectSkillsByCategory, showInstallationSummary, confirmInstallation, clearScreen, } from './prompts.js';
+import { install, displayResults, } from './installer.js';
 async function main() {
     console.log(chalk.bold('\n🤖 Agent Skills Installer\n'));
     const platform = getPlatformInfo();
@@ -27,25 +27,108 @@ async function main() {
     console.log(chalk.dim(`\n   Target:   ${targetDir}`));
     // Show installation recommendations
     showInstallationRecommendations(location);
-    const selectedAgents = await selectAgents(components.agents);
-    const selectedCommands = await selectCommands(components.commands);
-    const selectedSkills = await selectSkills(components.skillCategories, location);
-    const selections = {
-        agents: selectedAgents,
-        commands: selectedCommands,
-        skills: selectedSkills,
-    };
-    const summary = getInstallationSummary(selections);
-    if (summary.agents === 0 && summary.commands === 0 && summary.skills === 0) {
+    // Shopping cart flow
+    const cart = [];
+    // Collect agents (general always shown)
+    const selectedGeneralAgents = await selectGeneralAgents(components.agents);
+    selectedGeneralAgents.forEach((a) => {
+        cart.push({
+            type: 'agent',
+            name: a.name,
+            displayName: a.displayName,
+            category: a.category,
+        });
+    });
+    // For local installation, also show project-specific agents
+    if (location === 'local') {
+        const selectedFrontendAgents = await selectProjectAgents(components.agents, 'frontend');
+        selectedFrontendAgents.forEach((a) => {
+            cart.push({
+                type: 'agent',
+                name: a.name,
+                displayName: a.displayName,
+                category: a.category,
+            });
+        });
+        const selectedBackendAgents = await selectProjectAgents(components.agents, 'backend');
+        selectedBackendAgents.forEach((a) => {
+            cart.push({
+                type: 'agent',
+                name: a.name,
+                displayName: a.displayName,
+                category: a.category,
+            });
+        });
+    }
+    // Collect commands (general always shown)
+    const selectedGeneralCommands = await selectGeneralCommands(components.commands);
+    selectedGeneralCommands.forEach((c) => {
+        cart.push({
+            type: 'command',
+            name: c.name,
+            displayName: c.displayName,
+            category: c.category,
+        });
+    });
+    // For local installation, also show project-specific commands
+    if (location === 'local') {
+        const selectedFrontendCommands = await selectProjectCommands(components.commands, 'frontend');
+        selectedFrontendCommands.forEach((c) => {
+            cart.push({
+                type: 'command',
+                name: c.name,
+                displayName: c.displayName,
+                category: c.category,
+            });
+        });
+        const selectedBackendCommands = await selectProjectCommands(components.commands, 'backend');
+        selectedBackendCommands.forEach((c) => {
+            cart.push({
+                type: 'command',
+                name: c.name,
+                displayName: c.displayName,
+                category: c.category,
+            });
+        });
+    }
+    // Collect skills by category
+    const skillCategoryNames = Object.keys(components.skillCategories).sort();
+    for (const categoryName of skillCategoryNames) {
+        const selectedSkills = await selectSkillsByCategory(components.skillCategories, categoryName, location);
+        selectedSkills.forEach((s) => {
+            cart.push({
+                type: 'skill',
+                name: s.name,
+                displayName: s.displayName,
+                category: s.type === 'directory' ? s.name.split('/')[0] : 'general',
+            });
+        });
+    }
+    // Show summary
+    showInstallationSummary(cart, targetDir, location);
+    // Check if anything was selected
+    if (cart.length === 0) {
         console.log(chalk.yellow('\n⚠️  No components selected. Nothing to install.'));
         process.exit(0);
     }
-    const proceed = await confirmInstallation(targetDir, summary);
+    // Confirm installation
+    const proceed = await confirmInstallation();
     if (!proceed) {
         console.log(chalk.dim('\nInstallation cancelled.'));
         process.exit(0);
     }
-    console.log(chalk.dim('\nInstalling components...'));
+    clearScreen();
+    console.log(chalk.dim('Installing components...'));
+    // Convert cart to selections format
+    const selections = {
+        agents: components.agents.filter((a) => cart.some((c) => c.type === 'agent' && c.name === a.name)),
+        commands: components.commands.filter((c) => cart.some((c) => c.type === 'command' && c.name === c.name)),
+        skills: Object.fromEntries(Object.entries(components.skillCategories).map(([category, catData]) => [
+            category,
+            catData.skills.filter((s) => cart.some((c) => c.type === 'skill' && c.name === s.name)),
+        ])),
+    };
+    // Perform installation
     const results = await install(targetDir, selections);
     displayResults(results, targetDir);
 }
