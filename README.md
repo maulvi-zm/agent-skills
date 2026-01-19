@@ -1,20 +1,31 @@
 # Agent Skills Installer
 
-A CLI tool to install Claude Code agents, commands, and skills to your global configuration directory.
+A CLI tool to install Claude Code agents, commands, and skills either globally or to your project directory. Choose where to install and get smart defaults based on your choice.
 
 ## Installation
 
 ### Using npx from GitHub (recommended)
 
 ```bash
-# Replace 'username' with your GitHub username
-npx github:username/agent-skills-installer
-
-# Or use the full git URL
-npx git+https://github.com/username/agent-skills-installer.git
+npx github:maulvi-zm/agent-skills
 ```
 
-The `prepare` script will automatically compile TypeScript on first install.
+The installer will:
+1. Ask you to choose between global or local installation
+2. Show you smart defaults based on your choice
+3. Let you customize which components to install
+4. Install to the selected location
+
+### Using from a different GitHub account
+
+If you've forked this repository:
+
+```bash
+npx github:your-username/agent-skills
+
+# Or use the full git URL
+npx git+https://github.com/your-username/agent-skills.git
+```
 
 ### Local development
 
@@ -27,13 +38,19 @@ npm start
 
 ## What it does
 
-This tool installs Claude Code configurations to your global Claude config directory:
+This tool installs Claude Code configurations either globally or to your project directory.
 
-| Platform | Config Directory |
-|----------|-----------------|
-| macOS    | `~/.claude/`    |
-| Linux    | `~/.claude/`    |
-| Windows  | `%APPDATA%\Claude\` |
+### Installation Locations
+
+Users can choose where to install:
+
+1. **Global** (`~/.claude/` on macOS/Linux, `%APPDATA%\Claude\` on Windows)
+   - Available to all projects
+   - Suggested defaults: all agents, all commands, code-quality & shared skills only
+
+2. **Local** (`./claude/` in current directory)
+   - This project only
+   - Suggested defaults: all agents, all commands, all skills
 
 ### Components
 
@@ -43,14 +60,25 @@ The installer will discover and offer to install:
 - **Commands** - Slash commands for quick actions (`.md` files)
 - **Skills** - Domain-specific knowledge and patterns organized by category
 
-### Default selections
+### Smart Defaults
 
+The defaults change based on installation location:
+
+**Global Installation:**
 - All agents: **selected**
 - All commands: **selected**
 - `code-quality/` skills: **selected**
 - `shared/` skills: **selected**
 - `frontend/` skills: unchecked
 - `backend/` skills: unchecked
+
+**Local Installation:**
+- All agents: **selected**
+- All commands: **selected**
+- `code-quality/` skills: **selected**
+- `shared/` skills: **selected**
+- `frontend/` skills: **selected**
+- `backend/` skills: **selected**
 
 ## Project structure
 
