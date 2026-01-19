@@ -54,8 +54,8 @@ function displayItems(
     const isSelected = index === selectedIndex;
     const isChecked = selectedItems.has(item.id);
 
-    // Simple checkbox: [✓] or [ ]
-    const checkbox = isChecked ? chalk.green('[✓]') : '[ ]';
+    // Simple checkbox: ◉ or ◯
+    const checkbox = isChecked ? chalk.green('◉') : chalk.dim('◯');
 
     // Cursor indicator
     const cursor = isSelected ? chalk.yellow('›') : ' ';
