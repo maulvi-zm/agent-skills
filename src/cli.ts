@@ -14,6 +14,7 @@ import {
   selectSkills,
   confirmInstallation,
   selectInstallLocation,
+  showInstallationRecommendations,
   type InstallLocation as PromptInstallLocation,
 } from './prompts.js';
 import {
@@ -61,6 +62,9 @@ async function main(): Promise<void> {
   const targetDir = getInstallDir(location as InstallLocation);
 
   console.log(chalk.dim(`\n   Target:   ${targetDir}`));
+
+  // Show installation recommendations
+  showInstallationRecommendations(location as PromptInstallLocation);
 
   const selectedAgents = await selectAgents(components.agents);
   const selectedCommands = await selectCommands(components.commands);

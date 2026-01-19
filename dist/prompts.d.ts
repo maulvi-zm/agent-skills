@@ -20,6 +20,10 @@ export declare function selectCommands(commands: Command[]): Promise<Command[]>;
  */
 export declare function selectInstallLocation(): Promise<InstallLocation>;
 /**
+ * Show installation recommendations based on location.
+ */
+export declare function showInstallationRecommendations(location: InstallLocation): void;
+/**
  * Prompt user to select skills by category.
  * Suggested categories depend on installation location.
  */

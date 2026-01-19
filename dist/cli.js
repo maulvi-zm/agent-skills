@@ -2,7 +2,7 @@
 import chalk from 'chalk';
 import { getInstallDir, getSourceConfigDir, getPlatformInfo, } from './paths.js';
 import { discoverAll } from './discovery.js';
-import { selectAgents, selectCommands, selectSkills, confirmInstallation, selectInstallLocation, } from './prompts.js';
+import { selectAgents, selectCommands, selectSkills, confirmInstallation, selectInstallLocation, showInstallationRecommendations, } from './prompts.js';
 import { install, displayResults, getInstallationSummary, } from './installer.js';
 async function main() {
     console.log(chalk.bold('\n🤖 Agent Skills Installer\n'));
@@ -25,6 +25,8 @@ async function main() {
     const location = await selectInstallLocation();
     const targetDir = getInstallDir(location);
     console.log(chalk.dim(`\n   Target:   ${targetDir}`));
+    // Show installation recommendations
+    showInstallationRecommendations(location);
     const selectedAgents = await selectAgents(components.agents);
     const selectedCommands = await selectCommands(components.commands);
     const selectedSkills = await selectSkills(components.skillCategories, location);
