@@ -5,12 +5,11 @@ import chalk from 'chalk';
 import { getConfigPaths } from './paths.js';
 import { mergeAllRules } from './config-merger.js';
 import type { Agent, Command, Skill } from './discovery.js';
-import type { InstallationSummary } from './prompts.js';
 
 export interface Selections {
   agents: Agent[];
   commands: Command[];
-  skills: Record<string, Skill[]>;
+  skills: Skill[];
 }
 
 export interface InstallationResults {
@@ -36,7 +35,8 @@ async function ensureDir(dir: string): Promise<void> {
 }
 
 /**
- * Install selected components to the global Claude config directory.
+ * Install selected components to the target directory.
+ * Only creates directories for categories that have selected items.
  */
 export async function install(
   targetDir: string,
@@ -50,36 +50,60 @@ export async function install(
     rulesFiles: [],
   };
 
-  await ensureDir(paths.agents);
-  await ensureDir(paths.commands);
-  await ensureDir(paths.skills);
-
-  for (const agent of selections.agents) {
-    await installAgent(agent, paths.agents);
-    results.agents.push(agent.name);
-    results.rulesFiles.push(agent.rulesFile);
+  // Only create agents directory if there are agents to install
+  if (selections.agents.length > 0) {
+    await ensureDir(paths.agents);
+    for (const agent of selections.agents) {
+      await installAgent(agent, paths.agents);
+      results.agents.push(agent.name);
+      results.rulesFiles.push(agent.rulesFile);
+    }
   }
 
-  for (const command of selections.commands) {
-    await installCommand(command, paths.commands);
-    results.commands.push(command.name);
+  // Only create commands directory if there are commands to install
+  if (selections.commands.length > 0) {
+    await ensureDir(paths.commands);
+    for (const command of selections.commands) {
+      await installCommand(command, paths.commands);
+      results.commands.push(command.name);
+    }
   }
 
-  for (const [categoryName, skills] of Object.entries(selections.skills)) {
-    const categoryDir = join(paths.skills, categoryName);
-    await ensureDir(categoryDir);
+  // Only create skills directory if there are skills to install
+  if (selections.skills.length > 0) {
+    await ensureDir(paths.skills);
 
-    for (const skill of skills) {
-      await installSkill(skill, categoryDir);
-      results.skills.push(`${categoryName}/${skill.name}`);
+    // Group skills by skill category to minimize created directories
+    const skillsByCategory = new Map<string, Skill[]>();
+    for (const skill of selections.skills) {
+      if (!skillsByCategory.has(skill.skillCategory)) {
+        skillsByCategory.set(skill.skillCategory, []);
+      }
+      skillsByCategory.get(skill.skillCategory)!.push(skill);
 
-      if (skill.hasRulesFragment && skill.type === 'directory') {
+      results.skills.push(`${skill.skillCategory}/${skill.name}`);
+
+      // Collect rules fragments
+      if (skill.type === 'directory' && skill.path) {
         const fragmentPath = join(skill.path, 'skill-rules-fragment.json');
-        results.rulesFiles.push(fragmentPath);
+        if (await pathExists(fragmentPath)) {
+          results.rulesFiles.push(fragmentPath);
+        }
+      }
+    }
+
+    // Install skills, creating only necessary skill subdirectories
+    for (const [skillCategory, skills] of skillsByCategory) {
+      const skillCategoryDir = join(paths.skills, skillCategory);
+      await ensureDir(skillCategoryDir);
+
+      for (const skill of skills) {
+        await installSkill(skill, skillCategoryDir);
       }
     }
   }
 
+  // Merge all rules into skill-rules.json if there are any rules
   if (results.rulesFiles.length > 0) {
     await mergeAllRules(paths.skillRules, results.rulesFiles);
   }
@@ -95,10 +119,7 @@ async function installAgent(agent: Agent, targetDir: string): Promise<void> {
   await copyFile(agent.rulesFile, rulesTarget);
 }
 
-async function installCommand(
-  command: Command,
-  targetDir: string
-): Promise<void> {
+async function installCommand(command: Command, targetDir: string): Promise<void> {
   const target = join(targetDir, basename(command.file));
   await copyFile(command.file, target);
 }
@@ -155,22 +176,4 @@ export function displayResults(
   console.log(
     chalk.yellow('\n💡 Restart Claude Code to load the new configurations.\n')
   );
-}
-
-/**
- * Get installation summary for confirmation prompt.
- */
-export function getInstallationSummary(
-  selections: Selections
-): InstallationSummary {
-  let skillCount = 0;
-  for (const skills of Object.values(selections.skills)) {
-    skillCount += skills.length;
-  }
-
-  return {
-    agents: selections.agents.length,
-    commands: selections.commands.length,
-    skills: skillCount,
-  };
 }

@@ -1,5 +1,5 @@
 import { readdir, stat, access } from 'fs/promises';
-import { join, basename, extname } from 'path';
+import { join, basename } from 'path';
 import { constants } from 'fs';
 async function pathExists(path) {
     try {
@@ -11,148 +11,120 @@ async function pathExists(path) {
     }
 }
 /**
- * Discover agents in the agents directory.
- * Agents are .md files that have a corresponding -rules.json file.
+ * Discover agents from hierarchical structure
  */
 export async function discoverAgents(sourceDir) {
-    const agentsDir = join(sourceDir, 'agents');
     const agents = [];
-    if (!(await pathExists(agentsDir))) {
-        return agents;
-    }
-    const files = await readdir(agentsDir);
-    const mdFiles = files.filter((f) => f.endsWith('.md'));
-    for (const mdFile of mdFiles) {
-        const name = basename(mdFile, '.md');
-        const rulesFile = `${name}-rules.json`;
-        if (files.includes(rulesFile)) {
-            agents.push({
-                name,
-                mdFile: join(agentsDir, mdFile),
-                rulesFile: join(agentsDir, rulesFile),
-                displayName: formatDisplayName(name),
-                category: categorizeComponent(name),
-            });
+    const categories = ['general', 'frontend', 'backend'];
+    for (const category of categories) {
+        const agentsDir = join(sourceDir, category, 'agents');
+        if (!(await pathExists(agentsDir))) {
+            continue;
+        }
+        const files = await readdir(agentsDir);
+        const mdFiles = files.filter((f) => f.endsWith('.md'));
+        for (const mdFile of mdFiles) {
+            const name = basename(mdFile, '.md');
+            const rulesFile = `${name}-rules.json`;
+            if (files.includes(rulesFile)) {
+                agents.push({
+                    name,
+                    mdFile: join(agentsDir, mdFile),
+                    rulesFile: join(agentsDir, rulesFile),
+                    displayName: formatDisplayName(name),
+                    category,
+                });
+            }
         }
     }
     return agents;
 }
 /**
- * Discover commands in the commands directory.
- * Commands are .md files.
+ * Discover commands from hierarchical structure
  */
 export async function discoverCommands(sourceDir) {
-    const commandsDir = join(sourceDir, 'commands');
     const commands = [];
-    if (!(await pathExists(commandsDir))) {
-        return commands;
-    }
-    const files = await readdir(commandsDir);
-    const mdFiles = files.filter((f) => f.endsWith('.md'));
-    for (const mdFile of mdFiles) {
-        const name = basename(mdFile, '.md');
-        commands.push({
-            name,
-            file: join(commandsDir, mdFile),
-            displayName: formatDisplayName(name),
-            category: categorizeComponent(name),
-        });
+    const categories = ['general', 'frontend', 'backend'];
+    for (const category of categories) {
+        const commandsDir = join(sourceDir, category, 'commands');
+        if (!(await pathExists(commandsDir))) {
+            continue;
+        }
+        const files = await readdir(commandsDir);
+        const mdFiles = files.filter((f) => f.endsWith('.md'));
+        for (const mdFile of mdFiles) {
+            const name = basename(mdFile, '.md');
+            commands.push({
+                name,
+                file: join(commandsDir, mdFile),
+                displayName: formatDisplayName(name),
+                category,
+            });
+        }
     }
     return commands;
 }
 /**
- * Discover skills organized by category.
- * Skills can be:
- * - Directories with SKILL.md (complex skills)
- * - Single .md files (simple skills)
+ * Discover skills from hierarchical structure
  */
 export async function discoverSkills(sourceDir) {
-    const skillsDir = join(sourceDir, 'skills');
-    const categories = {};
-    if (!(await pathExists(skillsDir))) {
-        return categories;
-    }
-    const categoryDirs = await readdir(skillsDir);
-    for (const category of categoryDirs) {
-        const categoryPath = join(skillsDir, category);
-        const categoryStat = await stat(categoryPath);
-        if (!categoryStat.isDirectory()) {
+    const skills = [];
+    const categories = ['general', 'frontend', 'backend'];
+    for (const category of categories) {
+        const skillsDir = join(sourceDir, category, 'skills');
+        if (!(await pathExists(skillsDir))) {
             continue;
         }
-        categories[category] = {
-            name: category,
-            displayName: formatDisplayName(category),
-            skills: [],
-        };
-        const items = await readdir(categoryPath);
-        for (const item of items) {
-            const itemPath = join(categoryPath, item);
-            const itemStat = await stat(itemPath);
-            if (itemStat.isDirectory()) {
-                const skillMd = join(itemPath, 'SKILL.md');
-                if (await pathExists(skillMd)) {
-                    const hasRulesFragment = await pathExists(join(itemPath, 'skill-rules-fragment.json'));
-                    categories[category].skills.push({
-                        name: item,
-                        type: 'directory',
-                        path: itemPath,
-                        displayName: formatDisplayName(item),
-                        hasRulesFragment,
+        const skillDirs = await readdir(skillsDir);
+        for (const skillDirName of skillDirs) {
+            const skillPath = join(skillsDir, skillDirName);
+            const skillStat = await stat(skillPath);
+            if (!skillStat.isDirectory()) {
+                continue;
+            }
+            // Check if it's a complex skill with SKILL.md
+            const skillMd = join(skillPath, 'SKILL.md');
+            if (await pathExists(skillMd)) {
+                skills.push({
+                    name: skillDirName,
+                    type: 'directory',
+                    path: skillPath,
+                    displayName: formatDisplayName(skillDirName),
+                    skillCategory: skillDirName,
+                    category,
+                });
+            }
+            else {
+                // Check for simple .md files in this directory
+                const files = await readdir(skillPath);
+                const mdFiles = files.filter((f) => f.endsWith('.md') && f !== 'README.md');
+                for (const mdFile of mdFiles) {
+                    skills.push({
+                        name: basename(mdFile, '.md'),
+                        type: 'file',
+                        path: join(skillPath, mdFile),
+                        displayName: formatDisplayName(basename(mdFile, '.md')),
+                        skillCategory: skillDirName,
+                        category,
                     });
                 }
             }
-            else if (extname(item) === '.md') {
-                categories[category].skills.push({
-                    name: basename(item, '.md'),
-                    type: 'file',
-                    path: itemPath,
-                    displayName: formatDisplayName(basename(item, '.md')),
-                    hasRulesFragment: false,
-                });
-            }
         }
     }
-    return categories;
+    return skills;
 }
 /**
- * Discover all components from the source directory.
+ * Discover all components from the hierarchical source directory
  */
 export async function discoverAll(sourceDir) {
-    const [agents, commands, skillCategories] = await Promise.all([
+    const [agents, commands, skills] = await Promise.all([
         discoverAgents(sourceDir),
         discoverCommands(sourceDir),
         discoverSkills(sourceDir),
     ]);
-    return {
-        agents,
-        commands,
-        skillCategories,
-    };
+    return { agents, commands, skills };
 }
 function formatDisplayName(name) {
     return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-}
-function categorizeComponent(name) {
-    const lowerName = name.toLowerCase();
-    // Backend patterns
-    if (lowerName.includes('backend') ||
-        lowerName.includes('api') ||
-        lowerName.includes('database') ||
-        lowerName.includes('prisma') ||
-        lowerName.includes('express')) {
-        return 'backend';
-    }
-    // Frontend patterns
-    if (lowerName.includes('frontend') ||
-        lowerName.includes('react') ||
-        lowerName.includes('nextjs') ||
-        lowerName.includes('next-js') ||
-        lowerName.includes('ui') ||
-        lowerName.includes('component') ||
-        lowerName.includes('tailwind')) {
-        return 'frontend';
-    }
-    // Default to general
-    return 'general';
 }
 //# sourceMappingURL=discovery.js.map
