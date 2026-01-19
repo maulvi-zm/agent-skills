@@ -19,8 +19,13 @@ export interface MenuState {
  */
 function displayHeader(): void {
   console.clear();
-  console.log(chalk.bold.cyan('\n🛒 Configuration Browser\n'));
-  console.log(chalk.dim('  j/k: up/down  |  space: select  |  enter: browse  |  b: back  |  f: finish\n'));
+  console.log('');
+  console.log(chalk.blue('┌────────────────────────────────────────┐'));
+  console.log(chalk.blue('│  Component Selection                   │'));
+  console.log(chalk.blue('└────────────────────────────────────────┘'));
+  console.log('');
+  console.log(chalk.dim('j/k: navigate  |  space: select  |  enter: open  |  b: back  |  f: finish'));
+  console.log('');
 }
 
 /**
@@ -28,11 +33,13 @@ function displayHeader(): void {
  */
 function displayBreadcrumb(path: MenuItem[]): void {
   if (path.length === 0) {
-    console.log(chalk.cyan('📂 Root\n'));
+    console.log(chalk.blue('Location: Root'));
+    console.log('');
     return;
   }
-  const breadcrumb = path.map((item) => item.label).join(' / ');
-  console.log(chalk.cyan(`📂 ${breadcrumb}\n`));
+  const breadcrumb = path.map((item) => item.label).join(' > ');
+  console.log(chalk.blue(`Location: ${breadcrumb}`));
+  console.log('');
 }
 
 /**
@@ -46,18 +53,22 @@ function displayItems(
   items.forEach((item, index) => {
     const isSelected = index === selectedIndex;
     const isChecked = selectedItems.has(item.id);
-    const icon = item.type === 'folder' ? '📁' : '📄';
-    const checkbox = isChecked ? '☑️  ' : '☐  ';
-    const cursor = isSelected ? '▶ ' : '  ';
 
-    const label = item.type === 'folder' ? chalk.cyan(item.label) : item.label;
-    const line = `${cursor}${checkbox}${icon} ${label}`;
+    // Simple checkbox: [✓] or [ ]
+    const checkbox = isChecked ? chalk.green('[✓]') : '[ ]';
 
-    if (isSelected) {
-      console.log(chalk.inverse(line));
-    } else {
-      console.log(line);
+    // Cursor indicator
+    const cursor = isSelected ? chalk.yellow('›') : ' ';
+
+    // Label with folder indicator
+    let label = item.label;
+    if (item.type === 'folder') {
+      label = chalk.cyan(item.label + '/');
     }
+
+    const line = `${cursor} ${checkbox} ${label}`;
+
+    console.log(line);
   });
   console.log('');
 }
