@@ -126,8 +126,16 @@ async function installCommand(command: Command, targetDir: string): Promise<void
 
 async function installSkill(skill: Skill, targetDir: string): Promise<void> {
   if (skill.type === 'directory') {
-    const target = join(targetDir, skill.name);
-    await cp(skill.path, target, { recursive: true });
+    // For directory skills, if the skill name matches the category,
+    // copy contents directly to avoid duplication (e.g., react/react)
+    if (skill.name === skill.skillCategory) {
+      // Copy contents of the skill directory to targetDir
+      await cp(skill.path, targetDir, { recursive: true });
+    } else {
+      // For nested skills with different names, create a subdirectory
+      const target = join(targetDir, skill.name);
+      await cp(skill.path, target, { recursive: true });
+    }
   } else {
     const target = join(targetDir, basename(skill.path));
     await copyFile(skill.path, target);
